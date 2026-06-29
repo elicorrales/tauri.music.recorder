@@ -1,0 +1,12 @@
+take musical.notes.recorder.html file code
+and convert it all to Rust.
+then give me back the code. split
+the file where it makes sense for 
+good coding, into multiple files as needed.
+
+remember that we want GitHub Actions
+to do all the work, and all we
+want to do locally is just edit,
+and use 'git' commands to push
+to the GitHub repo so it will
+kick off the build.
