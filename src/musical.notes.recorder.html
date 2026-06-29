@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Octave Synth with Timbre Control</title>
+  <style>
+    body {
+      background-color: #1e1e24;
+      color: #f5f5f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      margin-bottom: 0.5rem;
+      font-weight: 400;
+      letter-spacing: 1px;
+    }
+
+    p {
+      color: #aaa;
+      margin-bottom: 2rem;
+    }
+
+    /* 3-Column Layout */
+    .app-container {
+      display: flex;
+      width: 100%;
+      max-width: 1300px;
+      gap: 20px;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .side-panel {
+      width: 240px;
+      background: #111;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .side-panel h3 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: #7097d1;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+
+    .center-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Record & List UI */
+    .record-btn {
+      background: #3a1c1c;
+      color: #ff5555;
+      border: 1px solid #ff5555;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+      margin-bottom: 15px;
+    }
+
+    .record-btn:hover {
+      background: #ff5555;
+      color: white;
+    }
+
+    .record-btn.recording {
+      background: #ff2222;
+      color: white;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 34, 34, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(255, 34, 34, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 34, 34, 0); }
+    }
+
+    .recordings-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .recordings-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #222;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .play-rec {
+      cursor: pointer;
+      flex: 1;
+      color: #ddd;
+    }
+    
+    .play-rec:hover { color: #fff; }
+
+    .del-rec {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .del-rec:hover { color: #ff5555; }
+
+    /* Visualizer Canvas */
+    canvas {
+      width: 100%;
+      height: 200px;
+      background: #1e1e24;
+      border-radius: 4px;
+      border: 1px solid #333;
+    }
+
+    /* Instrument Selector UI */
+    .instrument-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 2rem;
+      background: #111;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .inst-btn {
+      background: #2a2a35;
+      color: #fff;
+      border: 2px solid transparent;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .inst-btn span {
+      display: block;
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 2px;
+    }
+
+    .inst-btn:hover { background: #3a3a45; }
+    .inst-btn.active {
+      background: #4a6fa5;
+      border-color: #7097d1;
+    }
+
+    /* Core Playing Layout Wrapper */
+    .play-zone {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    /* Vertical Tempo/Speed Controller Panel */
+    .tempo-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: #111;
+      padding: 15px 10px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .tempo-btn {
+      background: #2a2a35;
+      color: #fff;
+      border: 1px solid #444;
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .tempo-btn:hover {
+      background: #4a6fa5;
+      border-color: #7097d1;
+    }
+
+    .tempo-display {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #aaa;
+      text-align: center;
+      min-width: 50px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Keyboard Layout */
+    .keyboard {
+      display: flex;
+      background: #111;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .key-white {
+      position: relative;
+      width: 45px;
+      height: 180px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 0 0 4px 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 15px;
+      font-weight: bold;
+      color: #333;
+      user-select: none;
+      transition: background 0.1s ease;
+    }
+
+    .key-white:active { background: #e0e0e0; }
+
+    .key-black {
+      position: absolute;
+      top: 0;
+      right: -15px; 
+      width: 28px;
+      height: 110px;
+      background: #222;
+      color: white;
+      border: 1px solid #000;
+      border-radius: 0 0 3px 3px;
+      z-index: 10;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 10px;
+      font-size: 0.8rem;
+    }
+
+    .key-black:active { background: #444; }
+
+    /* Melody Autoplay Panel Style */
+    .melody-bar {
+      display: flex;
+      gap: 12px;
+      margin-top: 2.5rem;
+      background: #16161a;
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+
+    .mel-btn {
+      background: #7a2222;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+
+    .mel-btn:hover { background: #9e3333; }
+  </style>
+</head>
+<body>
+
+  <h1>Web Audio Synth</h1>
+  <p>Select a sound profile and play the 2-octave keyboard</p>
+
+  <div class="app-container">
+    <aside class="side-panel">
+      <h3>Recordings</h3>
+      <button id="recordBtn" class="record-btn">🔴 Record</button>
+      <ul class="recordings-list" id="recordingsList">
+      </ul>
+    </aside>
+
+    <main class="center-panel">
+      <div class="instrument-bar" id="instrumentBar">
+        <button class="inst-btn active" data-inst="flute">Soft Flute<span>Pure / Gentle (Sine)</span></button>
+        <button class="inst-btn" data-inst="musicbox">Music Box<span>Soft / Plucky (Triangle)</span></button>
+        <button class="inst-btn" data-inst="organ">Church Organ<span>Full / Sustained (Triangle)</span></button>
+        <button class="inst-btn" data-inst="retro">8-Bit Arcade<span>Hollow / Retro (Square)</span></button>
+        <button class="inst-btn" data-inst="brass">Synth Brass<span>Edgy / Buzzing (Sawtooth)</span></button>
+        <button class="inst-btn" data-inst="drone">Dungeon Drone<span>Foreboding / Eerie (Sawtooth)</span></button>
+      </div>
+
+      <div class="play-zone">
+        <div class="tempo-controls">
+          <button class="tempo-btn" id="tempoUp" title="Speed Up">▲</button>
+          <div class="tempo-display" id="tempoDisplay">1.00x<br>Speed</div>
+          <button class="tempo-btn" id="tempoDown" title="Slow Down">▼</button>
+        </div>
+
+        <div class="keyboard" id="keyboard">
+          <div class="key-white" data-note="C3" data-freq="130.81">C3<div class="key-black" data-note="C#3" data-freq="138.59">C#</div></div>
+          <div class="key-white" data-note="D3" data-freq="146.83">D3<div class="key-black" data-note="D#3" data-freq="155.56">D#</div></div>
+          <div class="key-white" data-note="E3" data-freq="164.81">E3</div>
+          <div class="key-white" data-note="F3" data-freq="174.61">F3<div class="key-black" data-note="F#3" data-freq="185.00">F#</div></div>
+          <div class="key-white" data-note="G3" data-freq="196.00">G3<div class="key-black" data-note="G#3" data-freq="207.65">G#</div></div>
+          <div class="key-white" data-note="A3" data-freq="220.00">A3<div class="key-black" data-note="A#3" data-freq="233.08">A#</div></div>
+          <div class="key-white" data-note="B3" data-freq="246.94">B3</div>
+
+          <div class="key-white" data-note="C4" data-freq="261.63">C4<div class="key-black" data-note="C#4" data-freq="277.18">C#</div></div>
+          <div class="key-white" data-note="D4" data-freq="293.66">D4<div class="key-black" data-note="D#4" data-freq="311.13">D#</div></div>
+          <div class="key-white" data-note="E4" data-freq="329.63">E4</div>
+          <div class="key-white" data-note="F4" data-freq="349.23">F4<div class="key-black" data-note="F#4" data-freq="369.99">F#</div></div>
+          <div class="key-white" data-note="G4" data-freq="392.00">G4<div class="key-black" data-note="G#4" data-freq="415.30">G#</div></div>
+          <div class="key-white" data-note="A4" data-freq="440.00">A4<div class="key-black" data-note="A#4" data-freq="466.16">A#</div></div>
+          <div class="key-white" data-note="B4" data-freq="493.88">B4</div>
+          <div class="key-white" data-note="C5" data-freq="523.25">C5</div>
+        </div>
+      </div>
+
+      <div class="melody-bar" id="melodyBar">
+        <button class="mel-btn" data-theme="doom">Doom (E1M1 Main)</button>
+        <button class="mel-btn" data-theme="doom_bridge">Doom (E1M1 Bridge)</button>
+        <button class="mel-btn" data-theme="doom_suspense">Doom (E1M2 Suspense)</button>
+        <button class="mel-btn" data-theme="doom_heavy">Doom (Heavy Bass)</button>
+      </div>
+    </main>
+
+    <aside class="side-panel">
+      <h3>Visualizer</h3>
+      <canvas id="visualizerCanvas" width="200" height="200"></canvas>
+    </aside>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    let analyser = null;
+    let currentInstrument = 'flute';
+    let playbackRate = 1.0; 
+    
+    // Recording State
+    let isRecording = false;
+    let recordStartTime = 0;
+    let currentRecording = [];
+
+    // 5 Instrument Sound Profiles
+    const instruments = {
+      flute:    { type: 'sine',     attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.25 },
+      musicbox: { type: 'triangle', attack: 0.01, decay: 0.6, sustain: 0.0, release: 0.6 },
+      organ:    { type: 'triangle', attack: 0.04, decay: 0.0, sustain: 1.0, release: 0.15 },
+      retro:    { type: 'square',   attack: 0.01, decay: 0.1, sustain: 0.4, release: 0.1 },
+      brass:    { type: 'sawtooth', attack: 0.08, decay: 0.2, sustain: 0.6, release: 0.2 },
+      drone:    { type: 'sawtooth', attack: 0.4,  decay: 0.4, sustain: 0.7, release: 1.2 }
+    };
+
+    // Famous Game Themes encoded
+    const gameThemes = {
+      doom: [
+        { freq: 164.81, start: 0.00, dur: 0.12 }, { freq: 164.81, start: 0.15, dur: 0.12 },
+        { freq: 329.63, start: 0.30, dur: 0.12 }, { freq: 164.81, start: 0.45, dur: 0.12 },
+        { freq: 164.81, start: 0.60, dur: 0.12 }, { freq: 293.66, start: 0.75, dur: 0.12 },
+        { freq: 164.81, start: 0.90, dur: 0.12 }, { freq: 164.81, start: 1.05, dur: 0.12 },
+        { freq: 261.63, start: 1.20, dur: 0.12 }, { freq: 164.81, start: 1.35, dur: 0.12 },
+        { freq: 164.81, start: 1.50, dur: 0.12 }, { freq: 233.08, start: 1.65, dur: 0.15 } 
+      ],
+      doom_bridge: [
+        { freq: 164.81, start: 0.00, dur: 0.12 }, { freq: 164.81, start: 0.15, dur: 0.12 },
+        { freq: 196.00, start: 0.30, dur: 0.12 }, { freq: 164.81, start: 0.45, dur: 0.12 },
+        { freq: 164.81, start: 0.60, dur: 0.12 }, { freq: 220.00, start: 0.75, dur: 0.12 },
+        { freq: 164.81, start: 0.90, dur: 0.12 }, { freq: 164.81, start: 1.05, dur: 0.12 },
+        { freq: 233.08, start: 1.20, dur: 0.15 } 
+      ],
+      doom_suspense: [
+        { freq: 164.81, start: 0.00, dur: 0.45 }, { freq: 196.00, start: 0.55, dur: 0.45 },
+        { freq: 185.00, start: 1.10, dur: 0.45 }, { freq: 164.81, start: 1.65, dur: 0.65 },
+        { freq: 246.94, start: 2.40, dur: 0.55 } 
+      ],
+      doom_heavy: [
+        { freq: 130.81, start: 0.00, dur: 0.20 }, { freq: 130.81, start: 0.25, dur: 0.20 },
+        { freq: 146.83, start: 0.50, dur: 0.20 }, { freq: 164.81, start: 0.75, dur: 0.35 },
+        { freq: 130.81, start: 1.20, dur: 0.20 }, { freq: 146.83, start: 1.45, dur: 0.20 },
+        { freq: 138.59, start: 1.70, dur: 0.40 } 
+      ]
+    };
+
+    // Setup Audio Context & Visualizer
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.connect(audioCtx.destination);
+        drawVisualizer();
+      }
+    }
+
+    // Canvas Visualizer Loop
+    const canvas = document.getElementById('visualizerCanvas');
+    const canvasCtx = canvas.getContext('2d');
+    
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+      if (!analyser) return;
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyser.getByteTimeDomainData(dataArray);
+
+      canvasCtx.fillStyle = '#1e1e24';
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = '#7097d1';
+      canvasCtx.beginPath();
+
+      const sliceWidth = canvas.width * 1.0 / bufferLength;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * canvas.height / 2;
+        if (i === 0) { canvasCtx.moveTo(x, y); } 
+        else { canvasCtx.lineTo(x, y); }
+        x += sliceWidth;
+      }
+      canvasCtx.lineTo(canvas.width, canvas.height / 2);
+      canvasCtx.stroke();
+    }
+
+    function logNoteToRecording(frequency, startTimeOffset, duration, instrument) {
+      if (isRecording) {
+        currentRecording.push({
+          freq: frequency,
+          start: startTimeOffset,
+          dur: duration,
+          inst: instrument
+        });
+      }
+    }
+
+    // Play Manual Note
+    function playNoteLive(frequency) {
+      initAudio();
+      const startTime = audioCtx.currentTime;
+      const duration = 0.4; 
+      
+      logNoteToRecording(frequency, startTime - recordStartTime, duration, currentInstrument);
+
+      const inst = instruments[currentInstrument];
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc.type = inst.type;
+      osc.frequency.setValueAtTime(frequency, startTime);
+
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(0.5, startTime + inst.attack);
+      
+      const sustainVolume = 0.5 * inst.sustain;
+      gainNode.gain.exponentialRampToValueAtTime(sustainVolume + 0.001, startTime + inst.attack + inst.decay);
+      
+      const releaseTime = startTime + duration;
+      gainNode.gain.setValueAtTime(sustainVolume + 0.001, releaseTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseTime + inst.release);
+
+      osc.connect(gainNode);
+      gainNode.connect(analyser); // Connect to visualizer instead of destination directly
+
+      osc.start(startTime);
+      osc.stop(releaseTime + inst.release + 0.1);
+    }
+
+    // Play Scheduled Note (For Melodies & Playback)
+    function playNoteScheduled(frequency, startTime, duration, targetInstrument) {
+      const inst = instruments[targetInstrument];
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      osc.type = inst.type;
+      osc.frequency.setValueAtTime(frequency, startTime);
+      gainNode.gain.setValueAtTime(0, startTime);
+      
+      const safeAttack = Math.min(inst.attack, duration * 0.4);
+      const safeDecay = Math.min(inst.decay, duration * 0.4);
+
+      gainNode.gain.linearRampToValueAtTime(0.5, startTime + safeAttack);
+      const sustainVolume = 0.5 * inst.sustain;
+      gainNode.gain.exponentialRampToValueAtTime(sustainVolume + 0.001, startTime + safeAttack + safeDecay);
+      
+      const releaseTime = startTime + duration;
+      gainNode.gain.setValueAtTime(sustainVolume + 0.001, releaseTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseTime + inst.release);
+
+      osc.connect(gainNode);
+      gainNode.connect(analyser); // Connect to visualizer
+
+      osc.start(startTime);
+      osc.stop(releaseTime + inst.release + 0.1);
+    }
+
+    function playMelodyTheme(themeArray) {
+      initAudio();
+      const baseClockTime = audioCtx.currentTime;
+
+      themeArray.forEach(note => {
+        const preciseStart = baseClockTime + (note.start / playbackRate);
+        const preciseDur = note.dur / playbackRate;
+        
+        logNoteToRecording(note.freq, preciseStart - recordStartTime, preciseDur, currentInstrument);
+        playNoteScheduled(note.freq, preciseStart, preciseDur, currentInstrument);
+      });
+    }
+
+    /* --- RECORDING & STORAGE LOGIC --- */
+    
+    function loadRecordings() {
+      const saved = localStorage.getItem('synth_recordings');
+      return saved ? JSON.parse(saved) : [];
+    }
+
+    function saveRecordingData(data) {
+      localStorage.setItem('synth_recordings', JSON.stringify(data));
+      renderRecordings();
+    }
+
+    function renderRecordings() {
+      const list = document.getElementById('recordingsList');
+      list.innerHTML = '';
+      const recs = loadRecordings();
+      
+      recs.forEach((rec, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="play-rec" data-idx="${idx}">▶ ${rec.name}</span>
+          <button class="del-rec" data-idx="${idx}" title="Delete">✖</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    document.getElementById('recordBtn').addEventListener('click', (e) => {
+      initAudio(); // Force audio context awake if it wasn't
+      const btn = e.target;
+      
+      if (!isRecording) {
+        // Start Recording
+        isRecording = true;
+        recordStartTime = audioCtx.currentTime;
+        currentRecording = [];
+        btn.innerText = "⏹ Stop";
+        btn.classList.add('recording');
+      } else {
+        // Stop Recording
+        isRecording = false;
+        btn.innerText = "🔴 Record";
+        btn.classList.remove('recording');
+        
+        if (currentRecording.length > 0) {
+          const recs = loadRecordings();
+          recs.push({
+            name: `Piece ${recs.length + 1}`,
+            notes: currentRecording
+          });
+          saveRecordingData(recs);
+        }
+      }
+    });
+
+    document.getElementById('recordingsList').addEventListener('click', (e) => {
+      const idx = e.target.dataset.idx;
+      if (idx === undefined) return;
+      
+      const recs = loadRecordings();
+      
+      if (e.target.classList.contains('del-rec')) {
+        recs.splice(idx, 1);
+        saveRecordingData(recs);
+      } 
+      else if (e.target.classList.contains('play-rec')) {
+        initAudio();
+        const baseClockTime = audioCtx.currentTime;
+        const sequence = recs[idx].notes;
+        
+        sequence.forEach(note => {
+          playNoteScheduled(note.freq, baseClockTime + note.start, note.dur, note.inst);
+        });
+      }
+    });
+
+    /* --- EVENT LISTENERS --- */
+
+    document.getElementById('keyboard').addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('key-white') || e.target.classList.contains('key-black')) {
+        e.stopPropagation(); 
+        const freq = parseFloat(e.target.dataset.freq);
+        playNoteLive(freq);
+      }
+    });
+
+    document.getElementById('instrumentBar').addEventListener('click', (e) => {
+      const button = e.target.closest('.inst-btn');
+      if (button) {
+        document.querySelectorAll('.inst-btn').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        currentInstrument = button.dataset.inst;
+      }
+    });
+
+    document.getElementById('melodyBar').addEventListener('click', (e) => {
+      const button = e.target.closest('.mel-btn');
+      if (button) {
+        const themeKey = button.dataset.theme;
+        playMelodyTheme(gameThemes[themeKey]);
+      }
+    });
+
+    document.getElementById('tempoUp').addEventListener('click', () => {
+      if (playbackRate < 3.0) {
+        playbackRate = parseFloat((playbackRate + 0.15).toFixed(2));
+        document.getElementById('tempoDisplay').innerHTML = `${playbackRate.toFixed(2)}x<br>Speed`;
+      }
+    });
+
+    document.getElementById('tempoDown').addEventListener('click', () => {
+      if (playbackRate > 0.25) {
+        playbackRate = parseFloat((playbackRate - 0.15).toFixed(2));
+        document.getElementById('tempoDisplay').innerHTML = `${playbackRate.toFixed(2)}x<br>Speed`;
+      }
+    });
+
+    // Boot UI
+    renderRecordings();
+  </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+name: "Build and Release Tauri App"
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Generate Tauri Boilerplate
+        shell: bash
+        run: |
+          npm init -y
+          npm install @tauri-apps/cli
+          npm pkg set scripts.tauri="tauri"
+          npx tauri init --app-name tauri.music.recorder --window-title "Music Recorder" --frontend-dist "../src" --dev-url "http://localhost:1420"
+          mv tauri.conf.json src-tauri/tauri.conf.json
+
+      - name: Set Windows Rust Flags
+        if: matrix.platform == 'windows-latest'
+        run: echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+
+      - name: Build and Package Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: app-v0.1.0
+          releaseName: 'Music Recorder v0.1.0'
+          releaseBody: 'Automated build generated via GitHub Actions.'
+          releaseDraft: true
+          prerelease: false

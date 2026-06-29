@@ -1,0 +1,33 @@
+(this was the first prompting I gave to Gemini)
+(it turned  a webpage music player app into a recorder)
+
+
+We want to convert another webapp into  a tauri app.
+We want to make sure the lessons learned, mistakes
+in building and running (config) dont happen with this
+app.
+
+But first, i want a more challenging app because
+later we will try to turn the HTML/CSS/JS into
+actual compiled (Rust) code.
+
+/tauri.music.recorder
+$ tree -a
+.
+├── .github
+│   └── workflows
+│       └── build.yml
+├── .gitignore
+├── musical.notes.player.html
+└── tauri.conf.json
+
+2 directories, 4 files
+
+so first, take the html file, and I want to add 3 things:
+1-be able to actually record, not just play. i imagine that means capturing when i click on a piano key but alo, if i click on one of the premade  musical pieces (the bottom buttons), but recorded with whatever instrument(top buttons) and tempo.  so this includes capturing the silence between my clicking .
+2-put it in local storage. give it a name. show a list on lefside of the named pieces(it can just be piece1,piece2,etc. add an 'x' next to each so it can be deleted (and from storage). if i click it, it should play.
+3-on the right (doesnt have to be big) some canvas that somehow shows sound being played.. however you want to show it.
+
+Once we have that, then we can move on to setting up for a tauri/github/actions repo and project.
+
+

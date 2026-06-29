@@ -1,0 +1,27 @@
+I have started the following local project:
+
+tauri.music.recorder/
+├── .github
+│   └── workflows
+│       └── build.yml
+├── .gitignore
+├── src
+│   └── musical.notes.recorder.html
+├── tauri.conf.json
+
+the current build, and current conf files are stolen from the robot shooting game.
+
+those files took some cycles to get right - they work.  dont screw this up.
+dont forget something, dont add anything i didnt say to add.
+MINIMAL CHANGES.
+
+1) convert / adjust the files (they may have stale references to the robot project)
+2) then I will push, test
+3) then if all that goes well, WHEN come back to you, we can attempt to convert our code into compiled RUST as
+much as possible to limit reverse-engineering.
+
+if you can not fully read the uploaded files, SAY SO.
+
+
+
+
