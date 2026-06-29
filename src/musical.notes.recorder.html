@@ -65,14 +65,7 @@
     </aside>
 
     <main class="center-panel">
-      <div class="instrument-bar" id="instrumentBar">
-        <button class="inst-btn active" data-inst="flute">Soft Flute<span>Pure / Gentle (Sine)</span></button>
-        <button class="inst-btn" data-inst="musicbox">Music Box<span>Soft / Plucky (Triangle)</span></button>
-        <button class="inst-btn" data-inst="organ">Church Organ<span>Full / Sustained (Triangle)</span></button>
-        <button class="inst-btn" data-inst="retro">8-Bit Arcade<span>Hollow / Retro (Square)</span></button>
-        <button class="inst-btn" data-inst="brass">Synth Brass<span>Edgy / Buzzing (Sawtooth)</span></button>
-        <button class="inst-btn" data-inst="drone">Dungeon Drone<span>Foreboding / Eerie (Sawtooth)</span></button>
-      </div>
+      <div class="instrument-bar" id="instrumentBar"></div>
 
       <div class="play-zone">
         <div class="tempo-controls">
@@ -127,14 +120,9 @@
     let recordStartTime = 0;
     let currentRecording = [];
 
-    const instruments = {
-      flute:    { type: 'sine',     attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.25 },
-      musicbox: { type: 'triangle', attack: 0.01, decay: 0.6, sustain: 0.0, release: 0.6 },
-      organ:    { type: 'triangle', attack: 0.04, decay: 0.0, sustain: 1.0, release: 0.15 },
-      retro:    { type: 'square',   attack: 0.01, decay: 0.1, sustain: 0.4, release: 0.1 },
-      brass:    { type: 'sawtooth', attack: 0.08, decay: 0.2, sustain: 0.6, release: 0.2 },
-      drone:    { type: 'sawtooth', attack: 0.4,  decay: 0.4, sustain: 0.7, release: 1.2 }
-    };
+    // Instrument sound-design data now comes from compiled Rust (get_instruments).
+    // This map is keyed by id and filled in by loadInstruments() on boot.
+    const instruments = {};
 
     function initAudio() {
       if (!audioCtx) {
@@ -239,6 +227,22 @@
         
         logNoteToRecording(note.freq, preciseStart - recordStartTime, preciseDur, currentInstrument);
         playNoteScheduled(note.freq, preciseStart, preciseDur, currentInstrument);
+      });
+    }
+
+    // Pull the instrument definitions from Rust and build the selector bar.
+    async function loadInstruments() {
+      const defs = await invoke('get_instruments');
+      const bar = document.getElementById('instrumentBar');
+      bar.innerHTML = '';
+      defs.forEach((i, idx) => {
+        instruments[i.id] = { type: i.wave, attack: i.attack, decay: i.decay, sustain: i.sustain, release: i.release };
+        const btn = document.createElement('button');
+        btn.className = 'inst-btn' + (idx === 0 ? ' active' : '');
+        btn.dataset.inst = i.id;
+        btn.innerHTML = `${i.label}<span>${i.sublabel}</span>`;
+        bar.appendChild(btn);
+        if (idx === 0) currentInstrument = i.id;
       });
     }
 
@@ -360,6 +364,7 @@
     });
 
     // Boot UI
+    loadInstruments();
     renderRecordings();
   </script>
 </body>

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod database;
+mod instruments;
 mod melodies;
 
 fn main() {
@@ -10,6 +11,7 @@ fn main() {
             database::save_recording,
             database::load_recordings,
             database::delete_recording,
+            instruments::get_instruments,
             melodies::get_theme
         ])
         .run(tauri::generate_context!())
